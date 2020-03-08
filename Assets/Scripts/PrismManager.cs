@@ -52,6 +52,9 @@ public class PrismManager : MonoBehaviour
             prismScript.pointCount = randPointCount;
             prismScript.prismObject = prism;
 
+            prismScript.num = i;
+            //prismScript.setBounds();
+
             prisms.Add(prismScript);
             prismObjects.Add(prism);
             prismColliding.Add(prismScript, false);
@@ -107,8 +110,11 @@ public class PrismManager : MonoBehaviour
 
     #region Incomplete Functions
 
+
+    public int Quadtree_Depth = 5;
     private IEnumerable<PrismCollision> PotentialCollisions()
     {
+        /*
         for (int i = 0; i < prisms.Count; i++) {
             for (int j = i + 1; j < prisms.Count; j++) {
                 var checkPrisms = new PrismCollision();
@@ -118,12 +124,56 @@ public class PrismManager : MonoBehaviour
                 yield return checkPrisms;
             }
         }
+        // */
+
+
+
+        foreach(Prism p in prisms) {
+            p.setBounds();
+        }
+        QuadTree tree = new QuadTree(Quadtree_Depth, new Vector2(0.0f, 0.0f), prismRegionRadiusXZ);
+        
+
+
+
+        /* Uses a hashset to keep track of collisions
+        This way if A and B are overlapping on many quadrants, you'll
+        notice but only do the intensive check a single time.
+        // */
+        HashSet<int> collisionKeys = new HashSet<int>();
+
+        foreach(Prism p in prisms) {
+            List<Prism[]> cols = tree.register(p);
+
+            if(cols == null)
+                continue;
+
+            foreach(Prism[] col in cols) {        
+                // very simply: order prisms from 0 to n-1, use the key n*bigger + smaller
+                int bigger = max(col[0].num, col[1].num), smaller = min(col[0].num, col[1].num);
+                int key = bigger*prismCount + smaller;
+
+                // check if this key (unique for every combination of 2 prisms) is NOT already in the set
+                if(!collisionKeys.Contains(key)) {
+                    var check = new PrismCollision();
+                    check.a = col[0];
+                    check.b = col[1];
+                    yield return check;
+
+                    print("Collision between " + col[0].num + " and " + col[1].num);
+                    collisionKeys.Add(key);
+                }
+            }
+        }
 
         yield break;
     }
 
+ 
+
     private bool CheckCollision(PrismCollision collision)
     {
+       
         var prismA = collision.a;
         var prismB = collision.b;
 
@@ -151,6 +201,17 @@ public class PrismManager : MonoBehaviour
         Debug.DrawLine(prismObjA.transform.position, prismObjA.transform.position + collision.penetrationDepthVectorAB, Color.cyan, UPDATE_RATE);
     }
     
+   private int max(int a, int b) {
+        if(a > b)
+            return a;
+        return b;
+    }
+    private int min(int a, int b) {
+        if(a < b)
+            return a;
+        return b;
+    }
+
     #endregion
 
     #region Visualization Functions
@@ -212,7 +273,7 @@ public class PrismManager : MonoBehaviour
         public Vector3 penetrationDepthVectorAB;
     }
 
-    private class Tuple<K,V>
+    public class Tuple<K,V>
     {
         public K Item1;
         public V Item2;
