@@ -177,11 +177,11 @@ public class PrismManager : MonoBehaviour
         return colList;
     }
 
- 
+
 
     private bool CheckCollision(PrismCollision collision)
     {
-       
+
         var prismA = collision.a;
         var prismB = collision.b;
 
@@ -189,24 +189,59 @@ public class PrismManager : MonoBehaviour
         List<Vector3> minkowskiDiff = new List<Vector3>();
         Vector3 offset = new Vector3(0, 2, 0);
 
-        foreach(Vector3 vecA in prismA.points){
-            foreach(Vector3 vecB in prismB.points){
+        foreach (Vector3 vecA in prismA.points) {
+            foreach (Vector3 vecB in prismB.points) {
                 Vector3 nextVec = vecA - vecB;
                 minkowskiDiff.Add(nextVec);
-                Debug.DrawLine(nextVec, nextVec + offset, Color.cyan); 
+                //Debug.DrawLine(nextVec, nextVec + offset, Color.cyan, 5f);
             }
         }
 
 
-        
-        collision.penetrationDepthVectorAB = PenetrationDepth(new Vector3[]{Vector3.zero, Vector3.zero, Vector3.zero});
+
+        /*
+        Vector3[] simplex = new Vector3[3];
+
+        List<Edge> edges = new List<Edge> ();
+        for (int x = 0; x < minkowskiDiff.Count; x++)
+        {
+            for (int y = x + 1; y < minkowskiDiff.Count; y++)
+            {
+                Edge e = new Edge(minkowskiDiff[x], minkowskiDiff[y]);
+                if(!edges.Contains(e))
+                {
+                    edges.Add(e);
+                }
+            }
+        }
+
+        float improvement = 10, best = -1;
+
+        while(improvement > 0.2)
+        {
+            int curpos = -1;
+            float bestdist = -1;
+
+            for(int pos = 0; pos < simplex.Count; pos++)
+            {
+                float result = simplex[pos].originDistance();
+                if(bestdist < 0 || result < bestdist)
+                {
+                    bestdist = result;
+                    curpos = pos;
+                }
+            }
+
+
+        }
+
+        // */
+
+        //collision.penetrationDepthVectorAB = PenetrationDepth(new Vector3[]{Vector3.zero, Vector3.zero, Vector3.zero});
 
         return true;
     }
 
-    private Vector3 PenetrationDepth(Vector3[] simplex){
-        return Vector3.zero;
-    }
     
     #endregion
 
@@ -340,6 +375,38 @@ public class PrismManager : MonoBehaviour
         public Tuple(K k, V v) {
             Item1 = k;
             Item2 = v;
+        }
+    }
+
+    private class Edge
+    {
+        private Vector3 v1, v2;
+
+        public Edge(Vector3 a, Vector3 b)
+        {
+            v1 = a;
+            v2 = b;
+        }
+
+        public bool Equals(Edge e)
+        {
+            return v1.Equals(e.v1) && v2.Equals(e.v2);
+        }
+
+        public float originDistance()
+        {
+            float numerator = System.Math.Abs(  v2.x*v1.z - v2.z*v1.x  );
+            float denom = (float) System.Math.Sqrt((v2.z - v1.z) * (v2.z - v1.z) + (v2.x - v1.x) * (v2.x - v1.x));
+
+            return numerator / denom;
+        }
+
+        public Vector3 normal()
+        {
+            Vector3 AB = new Vector3(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
+            //Vector3 A0 = new Vector3(-v1.x, -v1.y, -v1.z);
+
+            return Vector3.Cross(Vector3.Cross(AB, v1), AB);
         }
     }
 
