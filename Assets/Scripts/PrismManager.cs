@@ -13,6 +13,9 @@ public class PrismManager : MonoBehaviour
     public GameObject regularPrismPrefab;
     public GameObject irregularPrismPrefab;
 
+
+    public bool seeGrid = true, seeBoxes = false;
+
     private List<Prism> prisms = new List<Prism>();
     private List<GameObject> prismObjects = new List<GameObject>();
     private GameObject prismParent;
@@ -69,8 +72,12 @@ public class PrismManager : MonoBehaviour
 
         DrawPrismRegion();
         DrawPrismWireFrames();
-        DrawGridLines();
-        DrawBoxes();
+
+        if(seeGrid)
+            DrawGridLines();
+
+        if(seeBoxes)
+            DrawBoxes();
 
         #if UNITY_EDITOR
             if (Application.isFocused)
