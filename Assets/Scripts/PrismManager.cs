@@ -117,7 +117,7 @@ public class PrismManager : MonoBehaviour
 
     #endregion
 
-    #region "Incomplete" Functions
+    #region COMPLETE Functions
 
 
     public int Quadtree_Depth = 5;
@@ -188,6 +188,7 @@ public class PrismManager : MonoBehaviour
 
     private bool CheckCollision(PrismCollision collision)
     {
+        #region Great Jolly Kappadia
 
         var prismA = collision.a;
         var prismB = collision.b;
@@ -239,7 +240,9 @@ public class PrismManager : MonoBehaviour
 
 
 
+        #endregion
 
+        #region Environmental Protection Agency
 
         List<Edge> edges = new List<Edge> ();
         for (int x = 0; x < simplex.Count; x++)
@@ -306,7 +309,9 @@ public class PrismManager : MonoBehaviour
             }
         }
 
-        collision.penetrationDepthVectorAB = edges[curpos].normal() * bestdist;
+        collision.penetrationDepthVectorAB = edges[curpos].normal() * (bestdist + 0.05f);
+
+        #endregion
 
         return true;
     }
