@@ -69,13 +69,15 @@ public class PrismManager : MonoBehaviour
 
         DrawPrismRegion();
         DrawPrismWireFrames();
+        DrawGridLines();
+        DrawBoxes();
 
-#if UNITY_EDITOR
-        if (Application.isFocused)
-        {
-            UnityEditor.SceneView.FocusWindowIfItsOpen(typeof(UnityEditor.SceneView));
-        }
-#endif
+        #if UNITY_EDITOR
+            if (Application.isFocused)
+            {
+                UnityEditor.SceneView.FocusWindowIfItsOpen(typeof(UnityEditor.SceneView));
+            }
+        #endif
 
         #endregion
     }
@@ -127,46 +129,52 @@ public class PrismManager : MonoBehaviour
         // */
 
 
-
+        
         foreach(Prism p in prisms) {
             p.setBounds();
         }
         QuadTree tree = new QuadTree(Quadtree_Depth, new Vector2(0.0f, 0.0f), prismRegionRadiusXZ);
-        
-
-
+        // */
 
         /* Uses a hashset to keep track of collisions
         This way if A and B are overlapping on many quadrants, you'll
         notice but only do the intensive check a single time.
         // */
         HashSet<int> collisionKeys = new HashSet<int>();
-
+        List<PrismCollision> colList = new List<PrismCollision>();
+        
         foreach(Prism p in prisms) {
             List<Prism[]> cols = tree.register(p);
 
-            if(cols == null)
+            if(cols.Count == 0) {
+                //print("0 collisions");
                 continue;
+            }
+
+            //print(cols.Count);
 
             foreach(Prism[] col in cols) {        
                 // very simply: order prisms from 0 to n-1, use the key n*bigger + smaller
                 int bigger = max(col[0].num, col[1].num), smaller = min(col[0].num, col[1].num);
                 int key = bigger*prismCount + smaller;
 
+                //print("Made it here");
+
                 // check if this key (unique for every combination of 2 prisms) is NOT already in the set
                 if(!collisionKeys.Contains(key)) {
                     var check = new PrismCollision();
                     check.a = col[0];
                     check.b = col[1];
-                    yield return check;
 
-                    print("Collision between " + col[0].num + " and " + col[1].num);
+                    //print("Collision between " + col[0].num + " and " + col[1].num);
                     collisionKeys.Add(key);
+                    colList.Add(check);
                 }
             }
         }
+        // */
 
-        yield break;
+        return colList;
     }
 
  
@@ -259,6 +267,32 @@ public class PrismManager : MonoBehaviour
                 Debug.DrawLine(prism.points[i] + Vector3.up * yMin, prism.points[(i + 1) % prism.pointCount] + Vector3.up * yMin, wireFrameColor);
                 Debug.DrawLine(prism.points[i] + Vector3.up * yMax, prism.points[(i + 1) % prism.pointCount] + Vector3.up * yMax, wireFrameColor);
             }
+        }
+    }
+
+    private void DrawGridLines() {
+        QuadTree tree = new QuadTree(Quadtree_Depth, new Vector2(0.0f, 0.0f), prismRegionRadiusXZ);
+        
+        tree.draw();
+    }
+
+    private void DrawBoxes() {
+        Color c = Color.white;
+        Vector3 botLeft, topLeft, botRight, topRight;
+
+        foreach(Prism p in prisms) {
+            if(p.bounds.Length == 0)
+                continue;
+
+            botLeft = new Vector3(p.bounds[0].x, 0, p.bounds[0].y);
+            topLeft = new Vector3(p.bounds[0].x, 0, p.bounds[1].y);
+            botRight = new Vector3(p.bounds[1].x, 0, p.bounds[0].y);
+            topRight = new Vector3(p.bounds[1].x, 0, p.bounds[1].y);
+
+            Debug.DrawLine(botLeft, topLeft, c);
+            Debug.DrawLine(botLeft, botRight, c);
+            Debug.DrawLine(topLeft, topRight, c);
+            Debug.DrawLine(botRight, topRight, c);
         }
     }
 
