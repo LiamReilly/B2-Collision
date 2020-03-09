@@ -110,7 +110,7 @@ public class PrismManager : MonoBehaviour
 
     #endregion
 
-    #region Incomplete Functions
+    #region "Incomplete" Functions
 
 
     public int Quadtree_Depth = 5;
@@ -186,9 +186,10 @@ public class PrismManager : MonoBehaviour
         var prismB = collision.b;
 
         //Generate minkowski difference
-        List<Vector3> minkowskiDiff = new List<Vector3>();
+        //List<Vector3> minkowskiDiff = new List<Vector3>();
         Vector3 offset = new Vector3(0, 1, 0);
 
+        /*
         foreach (Vector3 vecA in prismA.points) {
             foreach (Vector3 vecB in prismB.points) {
                 Vector3 nextVec = vecA - vecB;
@@ -197,6 +198,7 @@ public class PrismManager : MonoBehaviour
 
             }
         }
+        // */
 
         List<Vector3> simplex = new List<Vector3>();
 
@@ -223,16 +225,21 @@ public class PrismManager : MonoBehaviour
         }
 
         foreach(Vector3 v in simplex){
-            Debug.DrawLine(v, v + 2*offset, Color.blue, 5f);
+            //Debug.DrawLine(v, v + 2*offset, Color.blue, 5f);
         }
-        Debug.DrawLine(Vector3.zero, Vector3.zero + 2*offset, Color.white, 5f);
+        //Debug.DrawLine(Vector3.zero, Vector3.zero + 2*offset, Color.white, 5f);
+
+
+
+
+
 
         List<Edge> edges = new List<Edge> ();
-        for (int x = 0; x < minkowskiDiff.Count; x++)
+        for (int x = 0; x < simplex.Count; x++)
         {
-            for (int y = x + 1; y < minkowskiDiff.Count; y++)
+            for (int y = x + 1; y < simplex.Count; y++)
             {
-                Edge e = new Edge(minkowskiDiff[x], minkowskiDiff[y]);
+                Edge e = new Edge(simplex[x], simplex[y]);
                 if(!edges.Contains(e))
                 {
                     edges.Add(e);
@@ -242,27 +249,57 @@ public class PrismManager : MonoBehaviour
 
         //Doesn't work currently, so commented out
         //This is suppoped to be part of the EPA algorithm
-        // float improvement = 10, best = -1;
+        float improvement = 10, best = -1, bestdist = -1;
+        int curpos;
 
-        // while(improvement > 0.2)
-        // {
-        //     int curpos = -1;
-        //     float bestdist = -1;
+        while(improvement > 0.5)
+        {
 
-        //     for(int pos = 0; pos < simplex.Count; pos++)
-        //     {
-        //         float result = simplex[pos].originDistance();
-        //         if(bestdist < 0 || result < bestdist)
-        //         {
-        //             bestdist = result;
-        //             curpos = pos;
-        //         }
-        //     }
+            curpos = -1;
+            bestdist = -1;
 
+            for(int pos = 0; pos < edges.Count; pos++)
+            {
+                float result = edges[pos].originDistance();
+                if(bestdist < 0 || result < bestdist)
+                {
+                    bestdist = result;
+                    curpos = pos;
+                }
+            }
 
-        // }
+            best = bestdist;
 
-        collision.penetrationDepthVectorAB = PenetrationDepth(new Vector3[]{Vector3.zero, Vector3.zero, Vector3.zero});
+            Vector3 newPoint = MinkowskiSupport(prismA.points, prismB.points, edges[curpos].normal());
+
+            simplex.Add(newPoint);
+            edges.Add(new Edge(edges[curpos].v1, newPoint));
+            edges.Add(new Edge(newPoint, edges[curpos].v2));
+
+            edges.Remove(edges[curpos]);
+
+            float newOD1 = edges[edges.Count - 2].originDistance();
+            float newOD2 = edges[edges.Count - 1].originDistance();
+
+            bestdist = min(newOD1, newOD2);
+
+            improvement = best - bestdist;
+        }
+
+        curpos = -1;
+        bestdist = -1;
+
+        for(int pos = 0; pos < edges.Count; pos++)
+        {
+            float result = edges[pos].originDistance();
+            if(bestdist < 0 || result < bestdist)
+            {
+                bestdist = result;
+                curpos = pos;
+            }
+        }
+
+        collision.penetrationDepthVectorAB = edges[curpos].normal() * bestdist;
 
         return true;
     }
@@ -326,10 +363,6 @@ public class PrismManager : MonoBehaviour
 
         return support;
     }
-
-    private Vector3 PenetrationDepth(Vector3[] simplex){
-        return Vector3.zero;
-    }
     
     #endregion
 
@@ -354,15 +387,21 @@ public class PrismManager : MonoBehaviour
         //prismObjA.transform.position += pushA;
         //prismObjB.transform.position += pushB;
 
-        Debug.DrawLine(prismObjA.transform.position, prismObjA.transform.position + collision.penetrationDepthVectorAB, Color.cyan, UPDATE_RATE);
+        //Debug.DrawLine(prismObjA.transform.position, prismObjA.transform.position + collision.penetrationDepthVectorAB, Color.cyan, UPDATE_RATE);
     }
     
-   private int max(int a, int b) {
+    private int max(int a, int b) {
         if(a > b)
             return a;
         return b;
     }
     private int min(int a, int b) {
+        if(a < b)
+            return a;
+        return b;
+    }
+
+    private float min(float a, float b) {
         if(a < b)
             return a;
         return b;
@@ -468,7 +507,7 @@ public class PrismManager : MonoBehaviour
 
     private class Edge
     {
-        private Vector3 v1, v2;
+        public Vector3 v1, v2;
 
         public Edge(Vector3 a, Vector3 b)
         {
@@ -492,9 +531,9 @@ public class PrismManager : MonoBehaviour
         public Vector3 normal()
         {
             Vector3 AB = new Vector3(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
-            //Vector3 A0 = new Vector3(-v1.x, -v1.y, -v1.z);
+            Vector3 A0 = new Vector3(v1.x, v1.y, v1.z);
 
-            return Vector3.Cross(Vector3.Cross(AB, v1), AB);
+            return (Vector3.Cross(Vector3.Cross(AB, A0), AB)).normalized;
         }
     }
 
