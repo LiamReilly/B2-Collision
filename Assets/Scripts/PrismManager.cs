@@ -187,21 +187,108 @@ public class PrismManager : MonoBehaviour
 
         //Generate minkowski difference
         List<Vector3> minkowskiDiff = new List<Vector3>();
-        Vector3 offset = new Vector3(0, 2, 0);
+        Vector3 offset = new Vector3(0, 1, 0);
 
         foreach(Vector3 vecA in prismA.points){
             foreach(Vector3 vecB in prismB.points){
                 Vector3 nextVec = vecA - vecB;
                 minkowskiDiff.Add(nextVec);
-                Debug.DrawLine(nextVec, nextVec + offset, Color.cyan); 
+                //Debug.DrawLine(nextVec, nextVec + offset, Color.black, 5f); 
             }
         }
 
+        List<Vector3> simplex = new List<Vector3>();
 
+        Vector3 initDir = new Vector3(1, 0, 0);
+        simplex.Add(MinkowskiSupport(prismA.points, prismB.points, initDir));
+        initDir = -initDir;
+
+
+        while(true){
+            simplex.Add(MinkowskiSupport(prismA.points, prismB.points, initDir));
+
+            //Optimization to make sure the last element added actually passed the origin
+            //If not the Minkowski sum doesn't contain the origin
+            if(Vector3.Dot(simplex.Last(), initDir) <= 0){
+                return false;
+            }
+            else{
+                var values = containsOrigin(simplex, initDir);
+                initDir = values.Item2;
+                if(values.Item1){
+                    break;
+                }
+            }
+        }
+
+        foreach(Vector3 v in simplex){
+            Debug.DrawLine(v, v + 2*offset, Color.blue, 5f);
+        }
+        Debug.DrawLine(Vector3.zero, Vector3.zero + 2*offset, Color.white, 5f);
         
         collision.penetrationDepthVectorAB = PenetrationDepth(new Vector3[]{Vector3.zero, Vector3.zero, Vector3.zero});
 
         return true;
+    }
+
+    private (bool, Vector3) containsOrigin(List<Vector3> simplex, Vector3 dir){
+        Vector3 a = simplex.Last();
+        Vector3 a0 = -a;
+
+        if(simplex.Count == 3){
+            Vector3 b = simplex.ElementAt(1);
+            Vector3 c = simplex.ElementAt(0);
+
+            Vector3 ab = b-a;
+            Vector3 ac = c-a;
+
+            Vector3 abNor = tripleProduct(ac, ab, ab);
+            Vector3 acNor = tripleProduct(ab, ac, ac);
+
+            if(Vector3.Dot(abNor, a0) > 0){
+                simplex.Remove(c);
+                dir = abNor;
+            }else if(Vector3.Dot(acNor, a0) > 0){
+                simplex.Remove(b);
+                dir = acNor;
+            }else{
+                return (true, dir);
+            }
+        }else{
+            Vector3 b = simplex.ElementAt(0);
+            Vector3 ab = b-a;
+            Vector3 abNor = tripleProduct(ab, a0, ab);
+            dir = abNor;
+        }
+
+        return (false, dir);
+    }
+
+    private Vector3 tripleProduct(Vector3 a, Vector3 b, Vector3 c){
+        return Vector3.Cross(Vector3.Cross(a, b), c);
+    }
+
+    private Vector3 MinkowskiSupport(Vector3[] shape1, Vector3[] shape2, Vector3 vec){
+        Vector3 p1 = FarthestPointInDirection(shape1, vec);
+        Vector3 p2 = FarthestPointInDirection(shape2, -vec);
+
+        return p1-p2;
+    }
+
+    private Vector3 FarthestPointInDirection(Vector3[] vertices, Vector3 vec){
+        float highest = -float.MaxValue;
+        Vector3 support = new Vector3(0, 0, 0);
+
+        foreach(Vector3 v in vertices){
+            float dot = Vector3.Dot(v, vec);
+
+            if(dot > highest){
+                highest = dot;
+                support = v;
+            }
+        }
+
+        return support;
     }
 
     private Vector3 PenetrationDepth(Vector3[] simplex){
