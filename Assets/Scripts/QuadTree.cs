@@ -43,34 +43,37 @@ public class QuadTree
 
     // */
     public List<Prism[]> register(Prism p) {
+        
+        List<Prism[]> collisions = new List<Prism[]>();
 
-        //if this isn't a leaf, just send the prism down the tree
+        //if this isn't a leaf, just send the prism down the tree, take everything ya got, send it back up
         if(!isLeaf) {
+
+
             if(p.bounds[0].x < center.x && p.bounds[0].y < center.y) {
-                subtrees[0].register(p);
+                collisions.AddRange(subtrees[0].register(p));
             }
             
             if(p.bounds[0].x < center.x && p.bounds[1].y > center.y) {
-                subtrees[1].register(p);
+                collisions.AddRange(subtrees[1].register(p));
             }
 
             if(p.bounds[1].x > center.x && p.bounds[0].y < center.y) {
-                subtrees[2].register(p);
+                collisions.AddRange(subtrees[2].register(p));
             }
 
             if(p.bounds[1].x > center.x && p.bounds[1].y > center.y) {
-                subtrees[3].register(p);
+                collisions.AddRange(subtrees[3].register(p));
             }
 
-            return null;
+            return collisions;
         }
 
         //if we already have this in the set (somehow), just ignore it
         if(contained.Contains(p)) {
-            return null;
+            //MonoBehaviour.print("Already contained");
+            return collisions;
         }
-
-        List<Prism[]> collisions = new List<Prism[]>();
 
         //so now we know we don't have it in the set, and we're a leaf.
         //note this would only get sent to us if it's within bounds
@@ -79,10 +82,46 @@ public class QuadTree
             collision[0] = member;
             collision[1] = p;
 
-            contained.Add(p);
+            /*
+            if(member.num == 8 || p.num == 8) {
+                print("Collision: " + member.num + " with " + p.num);
+                print ("Square centered at " + center);
+            }
+            // */
+
+            collisions.Add(collision);
+        }
+        
+        contained.Add(p);
+
+        //MonoBehaviour.print("Added prism " + p.num + " to a place centered at " + center);
+
+        //if(collisions.Count > 1)
+            //print(collisions.Count+"");
+        return collisions;
+    }
+
+    public void draw() {
+        if(isLeaf) {
+            return;
         }
 
-        return collisions;
+        Vector3 leftside = new Vector3(center.x - radius, 0, center.y);
+        Vector3 rightside = new Vector3(center.x + radius, 0, center.y);
+        Vector3 top = new Vector3(center.x, 0, center.y + radius);
+        Vector3 bottom = new Vector3(center.x, 0, center.y - radius);
+
+        var c = Color.magenta;
+        Debug.DrawLine(leftside, rightside, c);
+        Debug.DrawLine(top, bottom, c);
+
+        foreach(QuadTree qt in subtrees) {
+            qt.draw();
+        }
+    }
+
+    public void print(string s) {
+        MonoBehaviour.print(s);
     }
 
     /*
@@ -106,6 +145,4 @@ public class QuadTree
         subtrees[3] = new QuadTree(depth-1, new Vector2(avgX, avgY), maxpoint);
     }
     // */
-
-
 }
