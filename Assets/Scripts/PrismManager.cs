@@ -177,13 +177,26 @@ public class PrismManager : MonoBehaviour
         var prismA = collision.a;
         var prismB = collision.b;
 
+        //Generate minkowski difference
+        List<Vector3> minkowskiDiff = new List<Vector3>();
+        Vector3 offset = new Vector3(0, 2, 0);
+
+        foreach(Vector3 vecA in prismA.points){
+            foreach(Vector3 vecB in prismB.points){
+                Vector3 nextVec = vecA - vecB;
+                minkowskiDiff.Add(nextVec);
+                Debug.DrawLine(nextVec, nextVec + offset, Color.cyan); 
+            }
+        }
+
+
         
-        collision.penetrationDepthVectorAB = PenetrationDepth(collision);
+        collision.penetrationDepthVectorAB = PenetrationDepth(new Vector3[]{Vector3.zero, Vector3.zero, Vector3.zero});
 
         return true;
     }
 
-    private Vector3 PenetrationDepth(PrismCollision collision){
+    private Vector3 PenetrationDepth(Vector3[] simplex){
         return Vector3.zero;
     }
     
